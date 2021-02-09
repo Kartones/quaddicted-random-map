@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import json
 import os
+from os.path import dirname, abspath, join
+
 import random
 import subprocess
 import sys
@@ -146,8 +148,8 @@ class Database():
 
 class Configuration:
 
-    QUAKE_ENGINE_BINARY = "./vkquake"
-    QUAKE_MAPS_PATH = "id1/maps"
+    QUAKE_ENGINE_BINARY = join(dirname(abspath(__file__)), join("vkquake"))
+    QUAKE_MAPS_PATH = join("id1", "maps")
     COMMAND_LINE_ARGS = "-nojoy +skill 3"
     FILE_IGNORE_LIST = [".map", ".dmm", ".bmp", ".gif", ".cfg", ".bat", ".html", ".jpg", ".diz"]
 
