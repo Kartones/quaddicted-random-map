@@ -96,16 +96,7 @@ class Database:
 
     @classmethod
     def update(cls) -> None:
-        # Updates only once each 24h
-        one_day_timedelta = timedelta(days=1)
-
-        stale = True
-        if os.path.exists(cls.DATABASE_FILE):
-            db_file_statinfo = os.stat(cls.DATABASE_FILE)
-            modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
-            stale = datetime.now() > modification_datetime + one_day_timedelta
-
-        if stale:
+        if cls._is_db_stale():
             print("> Updating Maps database from https://www.quaddicted.com ...")
             request = requests.get(cls.DATABASE_URL)
             if request.status_code != 200:
@@ -113,6 +104,7 @@ class Database:
                 exit(1)
 
             with open(cls.DATABASE_FILE, "w") as db_file_handle:
+                # anything not UTF-8 (at descriptions often), just ignore (fails with Windows otherwise)
                 db_file_handle.write(request.text.encode("cp1252", errors="ignore").decode("UTF-8", errors="ignore"))
 
     def load_maps(self, do_shuffle: bool = True) -> None:
@@ -150,6 +142,18 @@ class Database:
         with open(map_zipfile, "wb") as map_file_handle:
             map_file_handle.write(request.content)
 
+        zip_files = self._extract_zip_files(map_zipfile)
+
+        chosen_map_file = self._find_suitable_map(zip_files)
+        self._update_cache(map_id, chosen_map_file)
+
+        return chosen_map_file
+
+    @classmethod
+    def screenshot_url(cls, quake_map: Any) -> str:
+        return cls.SCREENSHOT_URL.format(id=quake_map["id"])
+
+    def _extract_zip_files(self, map_zipfile: str) -> List[str]:
         zip_files = []
         if zipfile.is_zipfile(map_zipfile):
             with zipfile.ZipFile(map_zipfile, "r") as zip_handle:
@@ -161,14 +165,20 @@ class Database:
         os.remove(map_zipfile)
         self._lowercase_files()
 
-        chosen_map_file = self._find_suitable_map(zip_files)
-        self._update_cache(map_id, chosen_map_file)
-
-        return chosen_map_file
+        return zip_files
 
     @classmethod
-    def screenshot_url(cls, quake_map: Any) -> str:
-        return cls.SCREENSHOT_URL.format(id=quake_map["id"])
+    def _is_db_stale(cls) -> bool:
+        # Updates only once each 24h
+        one_day_timedelta = timedelta(days=1)
+
+        stale = True
+        if os.path.exists(cls.DATABASE_FILE):
+            db_file_statinfo = os.stat(cls.DATABASE_FILE)
+            modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
+            stale = datetime.now() > modification_datetime + one_day_timedelta
+
+        return stale
 
     def _filter_unwanted_zip_files(self, original_file_list: List[str]) -> List[str]:
         return [
@@ -183,7 +193,7 @@ class Database:
 
     @classmethod
     def _find_suitable_map(cls, map_filenames: List[str]) -> str:
-        # Doesn't works at least for now with maps on subfolders
+        # Doesn't works (at least for now) with maps on subfolders
         map_files = [
             filename.lower()
             for filename in map_filenames
