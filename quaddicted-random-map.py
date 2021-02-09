@@ -32,10 +32,13 @@ class Database():
         # Updates only once each 24h
         one_day_timedelta = timedelta(days=1)
 
-        db_file_statinfo = os.stat(cls.DATABASE_FILE)
-        modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
+        stale = True
+        if os.path.exists(cls.DATABASE_FILE):
+            db_file_statinfo = os.stat(cls.DATABASE_FILE)
+            modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
+            stale = datetime.now() > modification_datetime + one_day_timedelta
 
-        if datetime.now() > modification_datetime + one_day_timedelta:
+        if stale:
             print("> Updating Maps database from https://www.quaddicted.com ...")
             request = requests.get(cls.DATABASE_URL)
             if request.status_code != 200:
