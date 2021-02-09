@@ -107,7 +107,7 @@ class Database:
         return [
             filename
             for filename in original_file_list
-            if filename[filename.rfind(".") :] not in self.config.FILE_IGNORE_LIST
+            if filename.lower()[filename.rfind(".") :] not in self.config.FILE_IGNORE_LIST
         ]
 
     @classmethod
