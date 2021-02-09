@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import json
 import os
+from os.path import dirname, abspath, join
 import platform
 import random
 import subprocess
@@ -146,8 +147,8 @@ class Database():
 
 class Configuration:
 
-    QUAKE_ENGINE_BINARY = "vkquake"
-    QUAKE_MAPS_PATH = "id1/maps"
+    QUAKE_ENGINE_BINARY = join(dirname(abspath(__file__)), join("vkquake"))
+    QUAKE_MAPS_PATH = join("id1", "maps")
     COMMAND_LINE_ARGS = "-nojoy +skill 3"
     FILE_IGNORE_LIST = [".map", ".dmm", ".bmp", ".gif", ".cfg", ".bat", ".html", ".jpg", ".diz"]
 
@@ -165,12 +166,10 @@ class Configuration:
     def _engine_binary_arg(self) -> str:
         operating_system_string = platform.system().lower()
         if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
-            if self.engine_binary.endswith(".exe"):
-                return self.engine_binary
-            else:
+            if not self.engine_binary.endswith(".exe"):
                 return "{}.exe".format(self.engine_binary)
-        else:
-            return "./{}".format(self.engine_binary)
+
+        return self.engine_binary
 
 
 if __name__ == "__main__":
