@@ -147,16 +147,21 @@ class Database():
 
 class Configuration:
 
-    QUAKE_ENGINE_BINARY = join(dirname(abspath(__file__)), join("vkquake"))
+    DEFAULT_ENGINE_BINARY = "vkquake"
     QUAKE_MAPS_PATH = join("id1", "maps")
     COMMAND_LINE_ARGS = "-nojoy +skill 3"
     FILE_IGNORE_LIST = [".map", ".dmm", ".bmp", ".gif", ".cfg", ".bat", ".html", ".jpg", ".diz"]
 
     def __init__(self) -> None:
-        self.engine_binary = self.QUAKE_ENGINE_BINARY
+        self.engine_binary = self.DEFAULT_ENGINE_BINARY
+        # by default, where this python file resides
+        self.execution_path = dirname(abspath(__file__))
 
     def set_engine_binary(self, engine_binary: str) -> None:
         self.engine_binary = engine_binary.lower()
+
+    def set_execution_path(self, execution_path: str) -> None:
+        self.execution_path = execution_path
 
     @property
     def command_line_binary_and_args(self) -> List[str]:
@@ -164,20 +169,34 @@ class Configuration:
 
     @property
     def _engine_binary_arg(self) -> str:
+        formatted_binary = self.engine_binary
+
         operating_system_string = platform.system().lower()
         if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
             if not self.engine_binary.endswith(".exe"):
-                return "{}.exe".format(self.engine_binary)
+                formatted_binary = "{}.exe".format(self.engine_binary)
 
-        return self.engine_binary
+        return join(self.execution_path, formatted_binary)
 
 
 if __name__ == "__main__":
+
+    def check_args(argv: List[str], index: int, config: Configuration):
+        if len(argv) < index+1:
+            return
+
+        if argv[index] == "--engine":
+            config.set_engine_binary(argv[index+1])
+        elif argv[index] == "--path":
+            config.set_execution_path(argv[index+1])
+
     config = Configuration()
 
-    if len(sys.argv) > 2:
-        if sys.argv[1] == "--engine":
-            config.set_engine_binary(sys.argv[2])
+    # 0: script name
+    # 1 & 2: one param and value
+    check_args(sys.argv, 1, config)
+    # 3 & 4: another param and value
+    check_args(sys.argv, 3, config)
 
     db = Database(config=config)
 

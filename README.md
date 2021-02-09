@@ -33,7 +33,7 @@ pip3 install -r requirements.txt
 
 ## Running
 
-Only providing instructions for linux (and only tested there), but pull requests are welcomed.
+Only providing instructions for linux, but pull requests are welcomed.
 
 Execute from a command line at your Quake root folder.
 
@@ -41,9 +41,14 @@ Execute from a command line at your Quake root folder.
 python3 quaddicted-random-map.py
 ```
 
-To select another engine (default is [vkQuake](https://github.com/Novum/vkQuake)):
+To select another engine (default is [vkQuake](https://github.com/Novum/vkQuake)), use `--engine` param:
 ```
 python3 quaddicted-random-map.py --engine ./quakespasm
+```
+
+If you don't have the python file in the same folder as quake, use `--path <...>` param:
+```
+python3 /<somepath>/quaddicted-random-map.py --path ./
 ```
 
 
