@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import json
 import os
 from os.path import dirname, abspath, join
-
+import platform
 import random
 import subprocess
 import sys
@@ -16,7 +16,7 @@ import requests
 class Database():
 
     DATABASE_URL = "https://www.quaddicted.com/reviews/quaddicted_database.xml"
-    # db files stored in the same execution folder (usually, quake base folder)
+    # db files stored in the same execution folder
     DATABASE_FILE = "database.xml"
     LOCAL_CACHE_FILE = "database_cache.json"
     MAP_ZIP_URL = "https://www.quaddicted.com/filebase/{id}.zip"
@@ -36,7 +36,7 @@ class Database():
         modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
 
         if datetime.now() > modification_datetime + one_day_timedelta:
-            print("Updating Maps database from https://www.quaddicted.com ...")
+            print("> Updating Maps database from https://www.quaddicted.com ...")
             request = requests.get(cls.DATABASE_URL)
             if request.status_code != 200:
                 print("> ERROR updating database file from {}".format(cls.DATABASE_URL))
@@ -111,7 +111,6 @@ class Database():
     def _contains_any_map(cls, map_filenames: List[str]) -> bool:
         return len([filename for filename in map_filenames if filename.lower().endswith(".bsp")]) > 0
 
-    # detect if map in subfolder
     @classmethod
     def _find_suitable_map(cls, map_filenames: List[str]) -> str:
         # Doesn't works at least for now with maps on subfolders
@@ -157,10 +156,20 @@ class Configuration:
         self.engine_binary = self.QUAKE_ENGINE_BINARY
 
     def set_engine_binary(self, engine_binary: str) -> None:
-        self.engine_binary = engine_binary
+        self.engine_binary = engine_binary.lower()
 
-    def get_command_line_binary_and_args(self) -> List[str]:
-        return [self.engine_binary] + self.COMMAND_LINE_ARGS.split(" ")
+    @property
+    def command_line_binary_and_args(self) -> List[str]:
+        return [self._engine_binary_arg] + self.COMMAND_LINE_ARGS.split(" ")
+
+    @property
+    def _engine_binary_arg(self) -> str:
+        operating_system_string = platform.system().lower()
+        if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
+            if not self.engine_binary.endswith(".exe"):
+                return "{}.exe".format(self.engine_binary)
+
+        return self.engine_binary
 
 
 if __name__ == "__main__":
@@ -183,7 +192,7 @@ if __name__ == "__main__":
     map_filename = ""
     while not map_filename:
         chosen_map = db.choose_map()
-        print("Checking Map '{}'...".format(chosen_map.find("title").text))
+        print("> Checking Map '{}'...".format(chosen_map.find("title").text))
         map_filename = db.fetch_map(chosen_map)
 
     print("")
@@ -193,4 +202,4 @@ if __name__ == "__main__":
 
     input("\n-=[ Press Enter to start Quake with map '{}' ]=-".format(map_filename))
 
-    subprocess.run(config.get_command_line_binary_and_args() + ["+map", map_filename])
+    subprocess.run(config.command_line_binary_and_args + ["+map", map_filename])
