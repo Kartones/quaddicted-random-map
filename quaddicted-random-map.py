@@ -13,6 +13,73 @@ import requests
 from bs4 import BeautifulSoup
 
 
+class Configuration:
+
+    DEFAULT_ENGINE_BINARY = "vkquake"
+    QUAKE_MAPS_PATH = join("id1", "maps")
+    COMMAND_LINE_ARGS = "-nojoy +skill 3"
+    """
+    Formats that are always or often relevant:
+    .bsp (maps themselves)
+    .lit (map lighting files, for modern engines)
+    .pak (while sometimes maps come inside, gfx and the like also can come packed)
+    .wad (guess some engines can read old doom-like wad files)
+    .txt (authors, instructions, etc., although often will get overriden)
+    .tga (textures inside subfolders)
+    .lmp (no idea)
+    .ogg (music)
+    .mdl (3D models)
+    .wav (sounds)
+    """
+    FILE_IGNORE_LIST = [
+        ".map",
+        ".dmm",
+        ".bmp",
+        ".gif",
+        ".cfg",
+        ".bat",
+        ".htm",
+        ".html",
+        ".jpg",
+        ".png",
+        ".exe",
+        ".diz",
+        ".dat",
+    ]
+
+    def __init__(self) -> None:
+        self.engine_binary = self.DEFAULT_ENGINE_BINARY
+        # by default, where this python file resides
+        self.execution_path = dirname(abspath(__file__))
+
+    @classmethod
+    def check_quake_folder(cls) -> None:
+        if not os.path.exists(cls.QUAKE_MAPS_PATH):
+            print("> ERROR can't find Quake maps folder ('{}')".format(cls.QUAKE_MAPS_PATH))
+            exit(1)
+
+    def set_engine_binary(self, engine_binary: str) -> None:
+        self.engine_binary = engine_binary.lower()
+
+    def set_execution_path(self, execution_path: str) -> None:
+        self.execution_path = execution_path
+
+    @property
+    def command_line_binary_and_args(self) -> List[str]:
+        return [self._engine_binary_arg] + self.COMMAND_LINE_ARGS.split(" ")
+
+    @property
+    def _engine_binary_arg(self) -> str:
+        formatted_binary = self.engine_binary
+
+        operating_system_string = platform.system().lower()
+        if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
+            if not self.engine_binary.endswith(".exe"):
+                formatted_binary = "{}.exe".format(self.engine_binary)
+
+        return join(self.execution_path, formatted_binary)
+
+
 class Database:
 
     DATABASE_URL = "https://www.quaddicted.com/reviews/quaddicted_database.xml"
@@ -149,56 +216,6 @@ class Database:
         for filename in os.listdir(self.config.QUAKE_MAPS_PATH):
             file_with_path = os.path.join(self.config.QUAKE_MAPS_PATH, filename)
             os.rename(file_with_path, file_with_path.lower())
-
-
-class Configuration:
-
-    DEFAULT_ENGINE_BINARY = "vkquake"
-    QUAKE_MAPS_PATH = join("id1", "maps")
-    COMMAND_LINE_ARGS = "-nojoy +skill 3"
-    FILE_IGNORE_LIST = [
-        ".map",
-        ".dmm",
-        ".bmp",
-        ".gif",
-        ".cfg",
-        ".bat",
-        ".html",
-        ".jpg",
-        ".diz",
-    ]
-
-    def __init__(self) -> None:
-        self.engine_binary = self.DEFAULT_ENGINE_BINARY
-        # by default, where this python file resides
-        self.execution_path = dirname(abspath(__file__))
-
-    @classmethod
-    def check_quake_folder(cls) -> None:
-        if not os.path.exists(cls.QUAKE_MAPS_PATH):
-            print("> ERROR can't find Quake maps folder ('{}')".format(cls.QUAKE_MAPS_PATH))
-            exit(1)
-
-    def set_engine_binary(self, engine_binary: str) -> None:
-        self.engine_binary = engine_binary.lower()
-
-    def set_execution_path(self, execution_path: str) -> None:
-        self.execution_path = execution_path
-
-    @property
-    def command_line_binary_and_args(self) -> List[str]:
-        return [self._engine_binary_arg] + self.COMMAND_LINE_ARGS.split(" ")
-
-    @property
-    def _engine_binary_arg(self) -> str:
-        formatted_binary = self.engine_binary
-
-        operating_system_string = platform.system().lower()
-        if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
-            if not self.engine_binary.endswith(".exe"):
-                formatted_binary = "{}.exe".format(self.engine_binary)
-
-        return join(self.execution_path, formatted_binary)
 
 
 if __name__ == "__main__":
