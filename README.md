@@ -14,7 +14,7 @@ Only providing instructions for linux, but pull requests are welcomed.
 
 ### Linux
 
-Install python if needed:
+Install python 3 if needed:
 ```
 sudo apt-get update
 sudo apt-get install python3
@@ -30,6 +30,16 @@ Install this project requirements:
 ```
 pip3 install -r requirements.txt
 ```
+
+### Windows
+
+Install python 3 if needed: https://www.python.org/downloads/windows/
+
+Install this project requirements:
+```
+pip3 install -r requirements.txt
+```
+
 
 ## Running
 

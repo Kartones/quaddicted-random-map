@@ -46,7 +46,7 @@ class Database:
                 exit(1)
 
             with open(cls.DATABASE_FILE, "w") as db_file_handle:
-                db_file_handle.write(request.text)
+                db_file_handle.write(request.text.encode("cp1252", errors="ignore").decode("UTF-8", errors="ignore"))
 
     def load_maps(self, do_shuffle: bool = True) -> None:
         def outmost_file_tags(element: Any) -> bool:
