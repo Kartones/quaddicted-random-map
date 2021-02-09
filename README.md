@@ -10,8 +10,6 @@ As the familiar expression says, `"A Quake map a day keeps boredom away"`.
 
 ## Setup
 
-Only providing instructions for linux, but pull requests are welcomed.
-
 ### Linux
 
 Install python 3 if needed:
@@ -43,9 +41,9 @@ pip3 install -r requirements.txt
 
 ## Running
 
-Only providing instructions for linux, but pull requests are welcomed.
-
 Execute from a command line at your Quake root folder.
+
+### Linux
 
 ```
 python3 quaddicted-random-map.py
@@ -60,6 +58,19 @@ If you don't have the python file in the same folder as quake, use `--path <...>
 ```
 python3 /<somepath>/quaddicted-random-map.py --path ./
 ```
+
+### Windows
+
+```
+python quaddicted-random-map.py
+```
+
+To select another engine (default is [vkQuake](https://github.com/Novum/vkQuake)), use `--engine` param (no need to add `.exe` extension):
+```
+python quaddicted-random-map.py --engine quakespasm
+```
+
+etcetera (see Linux version for other parameters)
 
 
 ## License
