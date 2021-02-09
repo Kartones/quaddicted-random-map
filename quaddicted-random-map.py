@@ -1,19 +1,19 @@
-from datetime import datetime, timedelta
 import json
 import os
-from os.path import dirname, abspath, join
 import platform
 import random
 import subprocess
 import sys
-from typing import Any, Dict, List
 import zipfile
+from datetime import datetime, timedelta
+from os.path import abspath, dirname, join
+from typing import Any, Dict, List
 
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
 
 
-class Database():
+class Database:
 
     DATABASE_URL = "https://www.quaddicted.com/reviews/quaddicted_database.xml"
     # db files stored in the same execution folder
@@ -32,10 +32,13 @@ class Database():
         # Updates only once each 24h
         one_day_timedelta = timedelta(days=1)
 
-        db_file_statinfo = os.stat(cls.DATABASE_FILE)
-        modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
+        stale = True
+        if os.path.exists(cls.DATABASE_FILE):
+            db_file_statinfo = os.stat(cls.DATABASE_FILE)
+            modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
+            stale = datetime.now() > modification_datetime + one_day_timedelta
 
-        if datetime.now() > modification_datetime + one_day_timedelta:
+        if stale:
             print("> Updating Maps database from https://www.quaddicted.com ...")
             request = requests.get(cls.DATABASE_URL)
             if request.status_code != 200:
@@ -43,10 +46,9 @@ class Database():
                 exit(1)
 
             with open(cls.DATABASE_FILE, "w") as db_file_handle:
-                db_file_handle.write(request.text)
+                db_file_handle.write(request.text.encode("cp1252", errors="ignore").decode("UTF-8", errors="ignore"))
 
     def load_maps(self, do_shuffle: bool = True) -> None:
-
         def outmost_file_tags(element: Any) -> bool:
             return element.name == "file" and element.has_attr("id") and element.has_attr("type")
 
@@ -68,9 +70,7 @@ class Database():
     def fetch_map(self, quake_map: Any, delete_zip: bool = False) -> str:
         map_id = quake_map["id"]
 
-        map_filepath = os.path.join(self.config.QUAKE_MAPS_PATH, map_id)
-        map_zipfile = "{}.zip".format(map_filepath)
-        map_file = "{}.bsp".format(map_filepath)
+        map_zipfile = "{}.zip".format(os.path.join(self.config.QUAKE_MAPS_PATH, map_id))
 
         if quake_map["id"] in self.cache.keys():
             return self.cache["id"]
@@ -104,8 +104,11 @@ class Database():
         return cls.SCREENSHOT_URL.format(id=quake_map["id"])
 
     def _filter_unwanted_zip_files(self, original_file_list: List[str]) -> List[str]:
-        return [filename for filename in original_file_list
-                if filename[filename.rfind("."):] not in self.config.FILE_IGNORE_LIST]
+        return [
+            filename
+            for filename in original_file_list
+            if filename[filename.rfind(".") :] not in self.config.FILE_IGNORE_LIST
+        ]
 
     @classmethod
     def _contains_any_map(cls, map_filenames: List[str]) -> bool:
@@ -114,8 +117,11 @@ class Database():
     @classmethod
     def _find_suitable_map(cls, map_filenames: List[str]) -> str:
         # Doesn't works at least for now with maps on subfolders
-        map_files = [filename.lower() for filename in map_filenames
-                     if filename.lower().endswith(".bsp") and os.pathsep not in filename]
+        map_files = [
+            filename.lower()
+            for filename in map_filenames
+            if filename.lower().endswith(".bsp") and os.pathsep not in filename
+        ]
 
         if not cls._contains_any_map(map_files):
             return ""
@@ -147,16 +153,37 @@ class Database():
 
 class Configuration:
 
-    QUAKE_ENGINE_BINARY = join(dirname(abspath(__file__)), join("vkquake"))
+    DEFAULT_ENGINE_BINARY = "vkquake"
     QUAKE_MAPS_PATH = join("id1", "maps")
     COMMAND_LINE_ARGS = "-nojoy +skill 3"
-    FILE_IGNORE_LIST = [".map", ".dmm", ".bmp", ".gif", ".cfg", ".bat", ".html", ".jpg", ".diz"]
+    FILE_IGNORE_LIST = [
+        ".map",
+        ".dmm",
+        ".bmp",
+        ".gif",
+        ".cfg",
+        ".bat",
+        ".html",
+        ".jpg",
+        ".diz",
+    ]
 
     def __init__(self) -> None:
-        self.engine_binary = self.QUAKE_ENGINE_BINARY
+        self.engine_binary = self.DEFAULT_ENGINE_BINARY
+        # by default, where this python file resides
+        self.execution_path = dirname(abspath(__file__))
+
+    @classmethod
+    def check_quake_folder(cls) -> None:
+        if not os.path.exists(cls.QUAKE_MAPS_PATH):
+            print("> ERROR can't find Quake maps folder ('{}')".format(cls.QUAKE_MAPS_PATH))
+            exit(1)
 
     def set_engine_binary(self, engine_binary: str) -> None:
         self.engine_binary = engine_binary.lower()
+
+    def set_execution_path(self, execution_path: str) -> None:
+        self.execution_path = execution_path
 
     @property
     def command_line_binary_and_args(self) -> List[str]:
@@ -164,20 +191,36 @@ class Configuration:
 
     @property
     def _engine_binary_arg(self) -> str:
+        formatted_binary = self.engine_binary
+
         operating_system_string = platform.system().lower()
         if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
             if not self.engine_binary.endswith(".exe"):
-                return "{}.exe".format(self.engine_binary)
+                formatted_binary = "{}.exe".format(self.engine_binary)
 
-        return self.engine_binary
+        return join(self.execution_path, formatted_binary)
 
 
 if __name__ == "__main__":
+
+    def check_args(argv: List[str], index: int, config: Configuration):
+        if len(argv) < index + 1:
+            return
+
+        if argv[index] == "--engine":
+            config.set_engine_binary(argv[index + 1])
+        elif argv[index] == "--path":
+            config.set_execution_path(argv[index + 1])
+
     config = Configuration()
 
-    if len(sys.argv) > 2:
-        if sys.argv[1] == "--engine":
-            config.set_engine_binary(sys.argv[2])
+    config.check_quake_folder()
+
+    # 0: script name
+    # 1 & 2: one param and value
+    check_args(sys.argv, 1, config)
+    # 3 & 4: another param and value
+    check_args(sys.argv, 3, config)
 
     db = Database(config=config)
 
