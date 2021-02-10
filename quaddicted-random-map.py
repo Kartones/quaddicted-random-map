@@ -193,7 +193,8 @@ class Database:
 
     @classmethod
     def _contains_any_map(cls, map_filenames: List[str]) -> bool:
-        return len([filename for filename in map_filenames if filename.lower().endswith(".bsp")]) > 0
+        # Note: assumes already lowercased filenames
+        return len([filename for filename in map_filenames if filename.endswith(".bsp")]) > 0
 
     @classmethod
     def _find_suitable_map(cls, map_filenames: List[str]) -> str:
@@ -207,7 +208,7 @@ class Database:
         if not cls._contains_any_map(map_files):
             return ""
 
-        start_map_candidates = [filename for filename in map_files if "start" in filename.lower()]
+        start_map_candidates = [filename for filename in map_files if "start" in filename]
         if start_map_candidates:
             return start_map_candidates[0]
         else:
@@ -227,9 +228,11 @@ class Database:
             json.dump(self.cache, cache_file_handle, indent=None)
 
     def _lowercase_files(self) -> None:
-        for filename in os.listdir(self.config.maps_path):
-            file_with_path = os.path.join(self.config.maps_path, filename)
-            # os.rename(file_with_path, file_with_path.lower())
+        for filename in os.listdir(self.config.QUAKE_MAPS_PATH):
+            os.rename(
+                os.path.join(self.config.QUAKE_MAPS_PATH, filename),
+                os.path.join(self.config.QUAKE_MAPS_PATH, filename.lower()),
+            )
 
 
 if __name__ == "__main__":
