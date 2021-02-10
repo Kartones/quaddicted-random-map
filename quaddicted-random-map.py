@@ -16,8 +16,9 @@ from bs4 import BeautifulSoup
 class Configuration:
 
     DEFAULT_ENGINE_BINARY = "vkquake"
-    QUAKE_MAPS_PATH = join("id1", "maps")
+    MAPS_RELATIVE_PATH = join("id1", "maps")
     COMMAND_LINE_ARGS = "-nojoy +skill 3"
+
     """
     Formats that are always or often relevant:
     .bsp (maps themselves)
@@ -52,17 +53,20 @@ class Configuration:
         # by default, where this python file resides
         self.execution_path = dirname(abspath(__file__))
 
-    @classmethod
-    def check_quake_folder(cls) -> None:
-        if not os.path.exists(cls.QUAKE_MAPS_PATH):
-            print("> ERROR can't find Quake maps folder ('{}')".format(cls.QUAKE_MAPS_PATH))
+    def check_quake_folder(self) -> None:
+        if not os.path.exists(self.maps_path):
+            print("> ERROR can't find Quake maps folder ('{}')".format(self.maps_path))
             exit(1)
 
     def set_engine_binary(self, engine_binary: str) -> None:
         self.engine_binary = engine_binary.lower()
 
     def set_execution_path(self, execution_path: str) -> None:
-        self.execution_path = execution_path
+        self.execution_path = os.path.abspath(execution_path)
+
+    @property
+    def maps_path(self) -> str:
+        return join(self.execution_path, self.MAPS_RELATIVE_PATH)
 
     @property
     def command_line_binary_and_args(self) -> List[str]:
@@ -129,7 +133,7 @@ class Database:
     def fetch_map(self, quake_map: Any, delete_zip: bool = False) -> str:
         map_id = quake_map["id"]
 
-        map_zipfile = "{}.zip".format(os.path.join(self.config.QUAKE_MAPS_PATH, map_id))
+        map_zipfile = "{}.zip".format(os.path.join(self.config.maps_path, map_id))
 
         if quake_map["id"] in self.cache.keys():
             return self.cache["id"]
@@ -160,7 +164,7 @@ class Database:
                 zip_files = zip_handle.namelist()
                 zip_files = self._filter_unwanted_zip_files(zip_files)
                 if self._contains_any_map(zip_files):
-                    zip_handle.extractall(path=self.config.QUAKE_MAPS_PATH, members=zip_files)
+                    zip_handle.extractall(path=self.config.maps_path, members=zip_files)
 
         os.remove(map_zipfile)
         self._lowercase_files()
@@ -240,17 +244,18 @@ if __name__ == "__main__":
         if argv[index] == "--engine":
             config.set_engine_binary(argv[index + 1])
         elif argv[index] == "--path":
+
             config.set_execution_path(argv[index + 1])
 
     config = Configuration()
-
-    config.check_quake_folder()
 
     # 0: script name
     # 1 & 2: one param and value
     check_args(sys.argv, 1, config)
     # 3 & 4: another param and value
     check_args(sys.argv, 3, config)
+
+    config.check_quake_folder()
 
     db = Database(config=config)
 
@@ -300,4 +305,4 @@ if __name__ == "__main__":
 
     input("\n-=[ Press Enter to start Quake with map '{}' ]=-".format(map_filename))
 
-    subprocess.run(config.command_line_binary_and_args + ["+map", map_filename])
+    subprocess.run(config.command_line_binary_and_args + ["+map", map_filename] + ["-basedir", config.execution_path])
