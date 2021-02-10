@@ -70,7 +70,7 @@ class Configuration:
 
     @property
     def command_line_binary_and_args(self) -> List[str]:
-        return [self._engine_binary_arg] + self.COMMAND_LINE_ARGS.split(" ")
+        return [self._engine_binary_arg] + self.COMMAND_LINE_ARGS.split(" ") + ["-basedir", self.execution_path]
 
     @property
     def _engine_binary_arg(self) -> str:
@@ -228,10 +228,10 @@ class Database:
             json.dump(self.cache, cache_file_handle, indent=None)
 
     def _lowercase_files(self) -> None:
-        for filename in os.listdir(self.config.QUAKE_MAPS_PATH):
+        for filename in os.listdir(self.config.maps_path):
             os.rename(
-                os.path.join(self.config.QUAKE_MAPS_PATH, filename),
-                os.path.join(self.config.QUAKE_MAPS_PATH, filename.lower()),
+                os.path.join(self.config.maps_path, filename),
+                os.path.join(self.config.maps_path, filename.lower()),
             )
 
 
@@ -305,4 +305,4 @@ if __name__ == "__main__":
 
     input("\n-=[ Press Enter to start Quake with map '{}' ]=-".format(map_filename))
 
-    subprocess.run(config.command_line_binary_and_args + ["+map", map_filename] + ["-basedir", config.execution_path])
+    subprocess.run(config.command_line_binary_and_args + ["+map", map_filename])
