@@ -251,7 +251,32 @@ if __name__ == "__main__":
 
     db = Database(config=config)
 
-    print("Quaddicted.com Random Map")
+    print(
+        """
+  Quaddicted.com Random Map
+
+     .::-           .::.
+   .::                 ::.
+  :6.                    ::
+ :6                       6:
+-6:                       :6-
+:6.                        66
+66-                       .66
+66:                       :66
+:66:       -:::::-       :66:
+ :66:       .666-       :66:
+  :666:.     666     .:666:
+   .:6666:...666.-::66666:
+     .:6666666666666666:
+        .-:6666666::-
+             666
+             666
+             666
+             :6:
+              6.
+              :
+    """
+    )
 
     db.update()
     # Sample deactivation of random map:
@@ -262,7 +287,7 @@ if __name__ == "__main__":
     map_filename = ""
     while not map_filename:
         chosen_map = db.choose_map()
-        print("> Checking Map '{}'...".format(chosen_map.find("title").text))
+        print("> Checking map '{}'...".format(chosen_map.find("title").text))
         map_filename = db.fetch_map(chosen_map)
 
     print("")
