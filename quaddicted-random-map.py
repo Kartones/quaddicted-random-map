@@ -13,6 +13,73 @@ import requests
 from bs4 import BeautifulSoup
 
 
+class Configuration:
+
+    DEFAULT_ENGINE_BINARY = "vkquake"
+    QUAKE_MAPS_PATH = join("id1", "maps")
+    COMMAND_LINE_ARGS = "-nojoy +skill 3"
+    """
+    Formats that are always or often relevant:
+    .bsp (maps themselves)
+    .lit (map lighting files, for modern engines)
+    .pak (while sometimes maps come inside, gfx and the like also can come packed)
+    .wad (guess some engines can read old doom-like wad files)
+    .txt (authors, instructions, etc., although often will get overriden)
+    .tga (textures inside subfolders)
+    .lmp (no idea)
+    .ogg (music)
+    .mdl (3D models)
+    .wav (sounds)
+    """
+    FILE_IGNORE_LIST = [
+        ".map",
+        ".dmm",
+        ".bmp",
+        ".gif",
+        ".cfg",
+        ".bat",
+        ".htm",
+        ".html",
+        ".jpg",
+        ".png",
+        ".exe",
+        ".diz",
+        ".dat",
+    ]
+
+    def __init__(self) -> None:
+        self.engine_binary = self.DEFAULT_ENGINE_BINARY
+        # by default, where this python file resides
+        self.execution_path = dirname(abspath(__file__))
+
+    @classmethod
+    def check_quake_folder(cls) -> None:
+        if not os.path.exists(cls.QUAKE_MAPS_PATH):
+            print("> ERROR can't find Quake maps folder ('{}')".format(cls.QUAKE_MAPS_PATH))
+            exit(1)
+
+    def set_engine_binary(self, engine_binary: str) -> None:
+        self.engine_binary = engine_binary.lower()
+
+    def set_execution_path(self, execution_path: str) -> None:
+        self.execution_path = execution_path
+
+    @property
+    def command_line_binary_and_args(self) -> List[str]:
+        return [self._engine_binary_arg] + self.COMMAND_LINE_ARGS.split(" ")
+
+    @property
+    def _engine_binary_arg(self) -> str:
+        formatted_binary = self.engine_binary
+
+        operating_system_string = platform.system().lower()
+        if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
+            if not self.engine_binary.endswith(".exe"):
+                formatted_binary = "{}.exe".format(self.engine_binary)
+
+        return join(self.execution_path, formatted_binary)
+
+
 class Database:
 
     DATABASE_URL = "https://www.quaddicted.com/reviews/quaddicted_database.xml"
@@ -29,16 +96,7 @@ class Database:
 
     @classmethod
     def update(cls) -> None:
-        # Updates only once each 24h
-        one_day_timedelta = timedelta(days=1)
-
-        stale = True
-        if os.path.exists(cls.DATABASE_FILE):
-            db_file_statinfo = os.stat(cls.DATABASE_FILE)
-            modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
-            stale = datetime.now() > modification_datetime + one_day_timedelta
-
-        if stale:
+        if cls._is_db_stale():
             print("> Updating Maps database from https://www.quaddicted.com ...")
             request = requests.get(cls.DATABASE_URL)
             if request.status_code != 200:
@@ -46,6 +104,7 @@ class Database:
                 exit(1)
 
             with open(cls.DATABASE_FILE, "w") as db_file_handle:
+                # anything not UTF-8 (at descriptions often), just ignore (fails with Windows otherwise)
                 db_file_handle.write(request.text.encode("cp1252", errors="ignore").decode("UTF-8", errors="ignore"))
 
     def load_maps(self, do_shuffle: bool = True) -> None:
@@ -83,6 +142,18 @@ class Database:
         with open(map_zipfile, "wb") as map_file_handle:
             map_file_handle.write(request.content)
 
+        zip_files = self._extract_zip_files(map_zipfile)
+
+        chosen_map_file = self._find_suitable_map(zip_files)
+        self._update_cache(map_id, chosen_map_file)
+
+        return chosen_map_file
+
+    @classmethod
+    def screenshot_url(cls, quake_map: Any) -> str:
+        return cls.SCREENSHOT_URL.format(id=quake_map["id"])
+
+    def _extract_zip_files(self, map_zipfile: str) -> List[str]:
         zip_files = []
         if zipfile.is_zipfile(map_zipfile):
             with zipfile.ZipFile(map_zipfile, "r") as zip_handle:
@@ -94,20 +165,26 @@ class Database:
         os.remove(map_zipfile)
         self._lowercase_files()
 
-        chosen_map_file = self._find_suitable_map(zip_files)
-        self._update_cache(map_id, chosen_map_file)
-
-        return chosen_map_file
+        return zip_files
 
     @classmethod
-    def screenshot_url(cls, quake_map: Any) -> str:
-        return cls.SCREENSHOT_URL.format(id=quake_map["id"])
+    def _is_db_stale(cls) -> bool:
+        # Updates only once each 24h
+        one_day_timedelta = timedelta(days=1)
+
+        stale = True
+        if os.path.exists(cls.DATABASE_FILE):
+            db_file_statinfo = os.stat(cls.DATABASE_FILE)
+            modification_datetime = datetime.fromtimestamp(db_file_statinfo.st_mtime)
+            stale = datetime.now() > modification_datetime + one_day_timedelta
+
+        return stale
 
     def _filter_unwanted_zip_files(self, original_file_list: List[str]) -> List[str]:
         return [
             filename
             for filename in original_file_list
-            if filename[filename.rfind(".") :] not in self.config.FILE_IGNORE_LIST
+            if filename.lower()[filename.rfind(".") :] not in self.config.FILE_IGNORE_LIST
         ]
 
     @classmethod
@@ -116,7 +193,7 @@ class Database:
 
     @classmethod
     def _find_suitable_map(cls, map_filenames: List[str]) -> str:
-        # Doesn't works at least for now with maps on subfolders
+        # Doesn't works (at least for now) with maps on subfolders
         map_files = [
             filename.lower()
             for filename in map_filenames
@@ -151,56 +228,6 @@ class Database:
             os.rename(file_with_path, file_with_path.lower())
 
 
-class Configuration:
-
-    DEFAULT_ENGINE_BINARY = "vkquake"
-    QUAKE_MAPS_PATH = join("id1", "maps")
-    COMMAND_LINE_ARGS = "-nojoy +skill 3"
-    FILE_IGNORE_LIST = [
-        ".map",
-        ".dmm",
-        ".bmp",
-        ".gif",
-        ".cfg",
-        ".bat",
-        ".html",
-        ".jpg",
-        ".diz",
-    ]
-
-    def __init__(self) -> None:
-        self.engine_binary = self.DEFAULT_ENGINE_BINARY
-        # by default, where this python file resides
-        self.execution_path = dirname(abspath(__file__))
-
-    @classmethod
-    def check_quake_folder(cls) -> None:
-        if not os.path.exists(cls.QUAKE_MAPS_PATH):
-            print("> ERROR can't find Quake maps folder ('{}')".format(cls.QUAKE_MAPS_PATH))
-            exit(1)
-
-    def set_engine_binary(self, engine_binary: str) -> None:
-        self.engine_binary = engine_binary.lower()
-
-    def set_execution_path(self, execution_path: str) -> None:
-        self.execution_path = execution_path
-
-    @property
-    def command_line_binary_and_args(self) -> List[str]:
-        return [self._engine_binary_arg] + self.COMMAND_LINE_ARGS.split(" ")
-
-    @property
-    def _engine_binary_arg(self) -> str:
-        formatted_binary = self.engine_binary
-
-        operating_system_string = platform.system().lower()
-        if any(["windows" in operating_system_string, "cygwin" in operating_system_string]):
-            if not self.engine_binary.endswith(".exe"):
-                formatted_binary = "{}.exe".format(self.engine_binary)
-
-        return join(self.execution_path, formatted_binary)
-
-
 if __name__ == "__main__":
 
     def check_args(argv: List[str], index: int, config: Configuration):
@@ -224,7 +251,32 @@ if __name__ == "__main__":
 
     db = Database(config=config)
 
-    print("Quaddicted.com Random Map")
+    print(
+        """
+  Quaddicted.com Random Map
+
+     .::-           .::.
+   .::                 ::.
+  :6.                    ::
+ :6                       6:
+-6:                       :6-
+:6.                        66
+66-                       .66
+66:                       :66
+:66:       -:::::-       :66:
+ :66:       .666-       :66:
+  :666:.     666     .:666:
+   .:6666:...666.-::66666:
+     .:6666666666666666:
+        .-:6666666::-
+             666
+             666
+             666
+             :6:
+              6.
+              :
+    """
+    )
 
     db.update()
     # Sample deactivation of random map:
@@ -235,7 +287,7 @@ if __name__ == "__main__":
     map_filename = ""
     while not map_filename:
         chosen_map = db.choose_map()
-        print("> Checking Map '{}'...".format(chosen_map.find("title").text))
+        print("> Checking map '{}'...".format(chosen_map.find("title").text))
         map_filename = db.fetch_map(chosen_map)
 
     print("")
