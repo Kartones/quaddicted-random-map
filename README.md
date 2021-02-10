@@ -2,6 +2,29 @@
 
 ## Intro
 
+```
+     .::-           .::.
+   .::                 ::.
+  :6.                    ::
+ :6                       6:
+-6:                       :6-
+:6.                        66
+66-                       .66
+66:                       :66
+:66:       -:::::-       :66:
+ :66:       .666-       :66:
+  :666:.     666     .:666:
+   .:6666:...666.-::66666:
+     .:6666666666666666:
+        .-:6666666::-
+             666
+             666
+             666
+             :6:
+              6.
+              :
+```
+
 I love [Quake](https://en.wikipedia.org/wiki/Quake_(video_game)). [Quake is forever](https://www.quaddicted.com/_media/quake/quake_is_forever.jpg).
 
 I also like a lot the [Quaddicted site](https://www.quaddicted.com/), but their [Quake Injector](https://www.quaddicted.com/tools/quake_injector) launcher a) didn't worked on my Linux laptop and b) I just wanted a way to enjoy new quake maps with ease.
