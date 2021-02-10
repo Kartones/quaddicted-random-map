@@ -62,7 +62,7 @@ class Configuration:
         self.engine_binary = engine_binary.lower()
 
     def set_execution_path(self, execution_path: str) -> None:
-        self.execution_path = execution_path.replace(".", dirname(abspath(__file__)))
+        self.execution_path = os.path.abspath(execution_path)
 
     @property
     def maps_path(self) -> str:
