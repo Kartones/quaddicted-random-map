@@ -103,7 +103,7 @@ python3 /<somepath>/quaddicted-random-map.py --path /<someotherpath>/Quake
 
 ### Windows
 
-```bash
+```powershell
 python quaddicted-random-map.py
 ```
 
