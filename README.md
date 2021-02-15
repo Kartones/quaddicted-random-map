@@ -2,7 +2,7 @@
 
 ## Intro
 
-```
+```plain
      .::-           .::.
    .::                 ::.
   :6.                    ::
@@ -36,31 +36,48 @@ As the familiar expression says, `"A Quake map a day keeps boredom away"`.
 ### Linux
 
 Install python 3 if needed:
-```
+
+```bash
 sudo apt-get update
 sudo apt-get install python3
 ```
 
 Install pip3 if needed:
-```
+
+```bash
 sudo apt-get update
 sudo apt install python3-pip
 ```
 
 Install this project requirements:
+
+```bash
+pip3 install -r requirements.txt
 ```
+
+### MacOS
+
+Install python3 using [Brew](https://brew.sh/) (recommended)
+
+```bash
+brew install python3
+```
+
+Install this project requirements:
+
+```bash
 pip3 install -r requirements.txt
 ```
 
 ### Windows
 
-Install python 3 if needed: https://www.python.org/downloads/windows/
+Install python 3 if needed: <https://www.python.org/downloads/windows/>
 
 Install this project requirements:
-```
+
+```powershell
 pip3 install -r requirements.txt
 ```
-
 
 ## Running
 
@@ -68,33 +85,35 @@ Execute from a command line at your Quake root folder.
 
 ### Linux
 
-```
+```bash
 python3 quaddicted-random-map.py
 ```
 
 To select another engine (default is [vkQuake](https://github.com/Novum/vkQuake)), use `--engine` param:
-```
+
+```bash
 python3 quaddicted-random-map.py --engine ./quakespasm
 ```
 
 If you don't have the python file in the same folder as quake, use `--path <...>` param:
-```
-python3 /<somepath>/quaddicted-random-map.py --path ./
+
+```bash
+python3 /<somepath>/quaddicted-random-map.py --path /<someotherpath>/Quake
 ```
 
 ### Windows
 
-```
+```bash
 python quaddicted-random-map.py
 ```
 
 To select another engine (default is [vkQuake](https://github.com/Novum/vkQuake)), use `--engine` param (no need to add `.exe` extension):
-```
+
+```powershell
 python quaddicted-random-map.py --engine quakespasm
 ```
 
 etcetera (see Linux version for other parameters)
-
 
 ## License
 
