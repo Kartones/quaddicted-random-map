@@ -52,6 +52,7 @@ class Configuration:
         self.engine_binary = self.DEFAULT_ENGINE_BINARY
         # by default, where this python file resides
         self.execution_path = dirname(abspath(__file__))
+        self.loop = False
 
     def check_quake_folder(self) -> None:
         if not os.path.exists(self.maps_path):
@@ -63,6 +64,9 @@ class Configuration:
 
     def set_execution_path(self, execution_path: str) -> None:
         self.execution_path = os.path.abspath(execution_path)
+
+    def set_enable_loop_mode(self) -> None:
+        self.loop = True
 
     @property
     def maps_path(self) -> str:
@@ -235,32 +239,30 @@ class Database:
             )
 
 
-if __name__ == "__main__":
+class QRR:
+    def __init__(self, config: Configuration) -> None:
+        self.config = config
+        self.db = Database(config=self.config)
 
-    def check_args(argv: List[str], index: int, config: Configuration):
-        if len(argv) < index + 1:
-            return
+    def run(self) -> None:
+        self._setup()
 
-        if argv[index] == "--engine":
-            config.set_engine_binary(argv[index + 1])
-        elif argv[index] == "--path":
+        if self.config.loop:
+            print("> Endless loop of enjoyment mode activated")
 
-            config.set_execution_path(argv[index + 1])
+        play_another = True
+        while play_another:
+            self._play_a_map()
+            play_another = self.config.loop
 
-    config = Configuration()
+    def _setup(self) -> None:
+        self.config.check_quake_folder()
+        self.db.update()
+        self.db.load_maps()
 
-    # 0: script name
-    # 1 & 2: one param and value
-    check_args(sys.argv, 1, config)
-    # 3 & 4: another param and value
-    check_args(sys.argv, 3, config)
-
-    config.check_quake_folder()
-
-    db = Database(config=config)
-
-    print(
-        """
+    def _play_a_map(self) -> None:
+        print(
+            """
   Quaddicted.com Random Map
 
      .::-           .::.
@@ -283,26 +285,56 @@ if __name__ == "__main__":
              :6:
               6.
               :
-    """
-    )
+            """
+        )
 
-    db.update()
-    # Sample deactivation of random map:
-    # db.load_maps(do_shuffle=False)
-    # chosen_map = db.choose_map(chosen_index=200)
-    db.load_maps()
+        map_filename = ""
+        while not map_filename:
+            chosen_map = self.db.choose_map()
+            print("> Checking map '{}'...".format(chosen_map.find("title").text))
+            map_filename = self.db.fetch_map(chosen_map)
 
-    map_filename = ""
-    while not map_filename:
-        chosen_map = db.choose_map()
-        print("> Checking map '{}'...".format(chosen_map.find("title").text))
-        map_filename = db.fetch_map(chosen_map)
+        print("")
+        print("Map name:   ", chosen_map.find("title").text)
+        print("Screenshot: ", self.db.screenshot_url(chosen_map))
+        print("Description: {}\n".format(chosen_map.find("description").text))
 
-    print("")
-    print("Map name:   ", chosen_map.find("title").text)
-    print("Screenshot: ", db.screenshot_url(chosen_map))
-    print("Description: {}\n".format(chosen_map.find("description").text))
+        input(
+            "\n-=[ Press Enter to start Quake with map '{map_name}'{extra_info} ]=-".format(
+                map_name=map_filename, extra_info=", Ctrl+C to exit" if self.config.loop else ""
+            )
+        )
 
-    input("\n-=[ Press Enter to start Quake with map '{}' ]=-".format(map_filename))
+        subprocess.run(self.config.command_line_binary_and_args + ["+map", map_filename])
 
-    subprocess.run(config.command_line_binary_and_args + ["+map", map_filename])
+
+if __name__ == "__main__":
+
+    def check_flag_args(argv: List[str], config: Configuration):
+        if len(argv) < 2:
+            return
+
+        for argc in range(1, len(argv)):
+            if argv[argc] == "--loop":
+                config.set_enable_loop_mode()
+
+    def check_args_with_value(argv: List[str], index: int, config: Configuration):
+        if len(argv) < index + 1:
+            return
+
+        if argv[index] == "--engine":
+            config.set_engine_binary(argv[index + 1])
+        elif argv[index] == "--path":
+            config.set_execution_path(argv[index + 1])
+
+    config = Configuration()
+
+    # 0: script name
+    # 1 & 2: one param and value
+    check_args_with_value(sys.argv, 1, config)
+    # 3 & 4: another param and value
+    check_args_with_value(sys.argv, 3, config)
+    check_flag_args(sys.argv, config)
+
+    qrr = QRR(config=config)
+    qrr.run()

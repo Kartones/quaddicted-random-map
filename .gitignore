@@ -2,6 +2,6 @@
 vkquake/
 qrm/
 database.xml
-.vscode/settings.json
 database_cache.json
+.vscode/settings.json
 id1/
