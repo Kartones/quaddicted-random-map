@@ -56,8 +56,11 @@ class Configuration:
 
     def check_quake_folder(self) -> None:
         if not os.path.exists(self.maps_path):
-            print("> ERROR can't find Quake maps folder ('{}')".format(self.maps_path))
-            exit(1)
+            try:
+                os.mkdir(self.maps_path)
+            except OSError:
+                print("> ERROR can't find/create Quake maps folder ('{}').".format(self.maps_path))
+                exit(1)
 
     def set_engine_binary(self, engine_binary: str) -> None:
         self.engine_binary = engine_binary.lower()
