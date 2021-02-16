@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from os.path import abspath, dirname, join
 from typing import Any, Dict, List
 
+import colorama
 import requests
 from bs4 import BeautifulSoup
 
@@ -59,8 +60,9 @@ class Configuration:
             try:
                 os.mkdir(self.maps_path)
             except OSError:
-                print("> ERROR can't find/create Quake maps folder ('{}').".format(self.maps_path))
-                exit(1)
+                Terminal.print_error_and_exit(
+                    "> ERROR can't find/create Quake maps folder ('{}').".format(self.maps_path)
+                )
 
     def set_engine_binary(self, engine_binary: str) -> None:
         self.engine_binary = engine_binary.lower()
@@ -91,6 +93,27 @@ class Configuration:
         return join(self.execution_path, formatted_binary)
 
 
+class Terminal:
+    @staticmethod
+    def print_error_and_exit(message: str) -> None:
+        print(colorama.Fore.RED + message + colorama.Style.RESET_ALL)
+        colorama.deinit()
+        exit(1)
+
+    @staticmethod
+    def print_colored(message: str) -> None:
+        print(colorama.Fore.YELLOW + message + colorama.Style.RESET_ALL)
+
+    @staticmethod
+    def print(message: str) -> None:
+        print(colorama.Style.DIM + colorama.Fore.WHITE + message + colorama.Style.RESET_ALL)
+
+    # TODO: Allow to press [ESC] to gracefully exit
+    @staticmethod
+    def input_colored(message: str) -> None:
+        input(colorama.Fore.YELLOW + message + colorama.Style.RESET_ALL)
+
+
 class Database:
 
     DATABASE_URL = "https://www.quaddicted.com/reviews/quaddicted_database.xml"
@@ -108,11 +131,10 @@ class Database:
     @classmethod
     def update(cls) -> None:
         if cls._is_db_stale():
-            print("> Updating Maps database from https://www.quaddicted.com ...")
+            Terminal.print("> Updating Maps database from https://www.quaddicted.com ...")
             request = requests.get(cls.DATABASE_URL)
             if request.status_code != 200:
-                print("> ERROR updating database file from {}".format(cls.DATABASE_URL))
-                exit(1)
+                Terminal.print_error_and_exit("> ERROR updating database file from {}".format(cls.DATABASE_URL))
 
             with open(cls.DATABASE_FILE, "w") as db_file_handle:
                 # anything not UTF-8 (at descriptions often), just ignore (fails with Windows otherwise)
@@ -148,8 +170,7 @@ class Database:
         map_url = self.MAP_ZIP_URL.format(id=map_id)
         request = requests.get(map_url)
         if request.status_code != 200:
-            print("> ERROR fetching map from {}".format(map_url))
-            exit(1)
+            Terminal.print_error_and_exit("> ERROR fetching map from {}".format(map_url))
         with open(map_zipfile, "wb") as map_file_handle:
             map_file_handle.write(request.content)
 
@@ -251,7 +272,7 @@ class QRR:
         self._setup()
 
         if self.config.loop:
-            print("> Endless loop of enjoyment mode activated")
+            Terminal.print_colored("> Endless loop of enjoyment mode activated")
 
         play_another = True
         while play_another:
@@ -259,12 +280,13 @@ class QRR:
             play_another = self.config.loop
 
     def _setup(self) -> None:
+        colorama.init()
         self.config.check_quake_folder()
         self.db.update()
         self.db.load_maps()
 
     def _play_a_map(self) -> None:
-        print(
+        Terminal.print_colored(
             """
   Quaddicted.com Random Map
 
@@ -294,15 +316,15 @@ class QRR:
         map_filename = ""
         while not map_filename:
             chosen_map = self.db.choose_map()
-            print("> Checking map '{}'...".format(chosen_map.find("title").text))
+            Terminal.print("> Checking map '{}'...".format(chosen_map.find("title").text))
             map_filename = self.db.fetch_map(chosen_map)
 
-        print("")
-        print("Map name:   ", chosen_map.find("title").text)
-        print("Screenshot: ", self.db.screenshot_url(chosen_map))
-        print("Description: {}\n".format(chosen_map.find("description").text))
+        Terminal.print_colored("")
+        Terminal.print_colored("Map name:    {}".format(chosen_map.find("title").text))
+        Terminal.print_colored("Screenshot:  {}".format(self.db.screenshot_url(chosen_map)))
+        Terminal.print_colored("Description: {}\n".format(chosen_map.find("description").text))
 
-        input(
+        Terminal.input_colored(
             "\n-=[ Press Enter to start Quake with map '{map_name}'{extra_info} ]=-".format(
                 map_name=map_filename, extra_info=", Ctrl+C to exit" if self.config.loop else ""
             )
