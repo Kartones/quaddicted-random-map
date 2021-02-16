@@ -12,6 +12,7 @@ from typing import Any, Dict, List
 import colorama
 import requests
 from bs4 import BeautifulSoup
+from getkey import getkey, keys
 
 
 class Configuration:
@@ -108,10 +109,13 @@ class Terminal:
     def print(message: str) -> None:
         print(colorama.Style.DIM + colorama.Fore.WHITE + message + colorama.Style.RESET_ALL)
 
-    # TODO: Allow to press [ESC] to gracefully exit
     @staticmethod
     def input_colored(message: str) -> None:
-        input(colorama.Fore.YELLOW + message + colorama.Style.RESET_ALL)
+        print(colorama.Fore.YELLOW + message + colorama.Style.RESET_ALL)
+        key = getkey()
+        if key == keys.ESC:
+            colorama.deinit()
+            exit(0)
 
 
 class Database:
@@ -325,8 +329,8 @@ class QRR:
         Terminal.print_colored("Description: {}\n".format(chosen_map.find("description").text))
 
         Terminal.input_colored(
-            "\n-=[ Press Enter to start Quake with map '{map_name}'{extra_info} ]=-".format(
-                map_name=map_filename, extra_info=", Ctrl+C to exit" if self.config.loop else ""
+            "\n-=[ Press any key to start Quake with map '{map_name}'{extra_info} ]=-".format(
+                map_name=map_filename, extra_info=", or [ESC] to exit" if self.config.loop else ""
             )
         )
 
