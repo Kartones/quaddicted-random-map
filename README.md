@@ -101,6 +101,9 @@ If you don't have the python file in the same folder as quake, use `--path <...>
 python3 /<somepath>/quaddicted-random-map.py --path /<someotherpath>/Quake
 ```
 
+There's an extra `--loop` parameter that, if specified, will fetch another level once you exit Quake.
+
+
 ### Windows
 
 ```powershell
