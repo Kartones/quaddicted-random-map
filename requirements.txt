@@ -4,5 +4,5 @@ lxml==4.9.3
 certifi==2023.5.7
 chardet==5.1.0
 idna==3.4
-urllib3==2.0.3
+urllib3==2.0.4
 colorama==0.4.6
