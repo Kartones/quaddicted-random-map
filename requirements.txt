@@ -3,6 +3,6 @@ beautifulsoup4==4.12.2
 lxml==4.9.3
 certifi==2023.11.17
 chardet==5.2.0
-idna==3.5
+idna==3.6
 urllib3==2.1.0
 colorama==0.4.6
